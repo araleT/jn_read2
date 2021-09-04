@@ -68,11 +68,6 @@ void make_csv(int64 my_cards, int out_cards[8][15])
 void makeMoveData(int64 myCards, bitValidHandsArray vha, double vha_scores[], const fieldInfo *finfo, int64 oppCards)
 {
     FILE *fp;
-    // char fn_restCards[30], fn_nextStates[30], fn_oppCards[30], fn_vhaScores[30];
-    // sprintf(fn_restCards,  "moveData/P%d_restCards.txt",  player_num);
-    // sprintf(fn_nextStates, "moveData/P%d_nextStates.txt", player_num);
-    // sprintf(fn_oppCards,   "moveData/P%d_oppCards.txt",   player_num);
-    // sprintf(fn_vhaScores,  "moveData/P%d_vhaScores.txt",  player_num);
     char *fn_restCards  = "moveData/restCards.txt";
     char *fn_nextStates = "moveData/nextStates.txt";
     char *fn_oppCards   = "moveData/oppCards.txt";
@@ -86,38 +81,44 @@ void makeMoveData(int64 myCards, bitValidHandsArray vha, double vha_scores[], co
     }
 
 
-    // restCards
-    fp = fopen(fn_restCards, "a");
-    if (fp == NULL) {
-        printf("%sファイルが開けません\n", fn_restCards); return;
-    }
-
-    if (initial_write == 0) {
-        fprintf(fp, "\n");
-    }
-    int restCards[5][14];
-    for (int i = 0; i < vha.size; i++) {
-        bit2cards(restCards, myCards ^ vha.hands[i].hands);
-        cardsWrite(fp, restCards);
-    }
-    fclose(fp);
-
-
     // nextStates
     fp = fopen(fn_nextStates, "a");
     if (fp == NULL) {
         printf("%sファイルが開けません\n", fn_nextStates); return;
     }
-
     if (initial_write == 0) {
         fprintf(fp, "\n");
     }
+    
     fieldInfo simField;
+    int array[24], revs[vha.size];
     for (int i = 0; i < vha.size; i++) {
         simField = *finfo;
         simuVH(&vha.hands[i], &simField);
-        finfoWrite(fp, &simField);
+        finfo2states(array, &simField);
+        arrayWrite(fp, array, 24);
         fprintf(fp, "\n");
+        
+        revs[i] = simField.rev;
+    }
+    fclose(fp);
+
+
+    // restCards
+    fp = fopen(fn_restCards, "a");
+    if (fp == NULL) {
+        printf("%sファイルが開けません\n", fn_restCards); return;
+    }
+    if (initial_write == 0) {
+        fprintf(fp, "\n");
+    }
+    
+    int restCards[5][14];
+    for (int i = 0; i < vha.size; i++) {
+        bit2cards(restCards, myCards ^ vha.hands[i].hands);
+        if (revs[i] == 1)
+            reverseCards(restCards);
+        cardsWrite(fp, restCards);
     }
     fclose(fp);
 
@@ -134,6 +135,8 @@ void makeMoveData(int64 myCards, bitValidHandsArray vha, double vha_scores[], co
     int opp[5][14];
     bit2cards(opp, oppCards);
     for (int i = 0; i < vha.size; i++) {
+        if (revs[i] == 1)
+            reverseCards(opp);
         cardsWrite(fp, opp);
     }
     fclose(fp);
@@ -157,57 +160,72 @@ void makeMoveData(int64 myCards, bitValidHandsArray vha, double vha_scores[], co
 /**
  * 推測モデルの学習の入力データに用いる
  * 以下の４つのデータ GuessInputData/ のファイルに書き込む
- * 1. 場に出ていた手役
- * 2. 提出された手役
- * 3. 場の状態、変化
- * 4. 見えていない残りのカードで作られる手役構成
+ * 1. 場に出ていたカード
+ * 2. 提出されたカード
+ * 3. まだ見えていないカード
+ * 4. 場の変化
 */
 void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCards, int64 myCards)
 {
     FILE *fp;
-    char fn_baHand[40], fn_submitHand[40], fn_states[40], fn_oppHands[40];
-    sprintf(fn_baHand,     "guessInputData/P%d_baHand.txt",     player_num);
-    sprintf(fn_submitHand, "guessInputData/P%d_submitHand.txt", player_num);
+    char fn_baCard[40], fn_submitCard[40], fn_states[40], fn_oppCards[40];
+    sprintf(fn_baCard,     "guessInputData/P%d_baCard.txt",     player_num);
+    sprintf(fn_submitCard, "guessInputData/P%d_submitCard.txt", player_num);
+    sprintf(fn_oppCards,   "guessInputData/P%d_oppCard.txt",   player_num);
     sprintf(fn_states,     "guessInputData/P%d_states.txt",     player_num);
-    sprintf(fn_oppHands,   "guessInputData/P%d_oppHands.txt",   player_num);
 
     if (initial_write == 1) {
-        outputFileReset(fn_baHand);
-        outputFileReset(fn_submitHand);
+        outputFileReset(fn_baCard);
+        outputFileReset(fn_submitCard);
+        outputFileReset(fn_oppCards);
         outputFileReset(fn_states);
-        outputFileReset(fn_oppHands);
     }
 
-    // baHands
-    fp = fopen(fn_baHand, "a");
+    // baCard
+    fp = fopen(fn_baCard, "a");
     if (fp == NULL) {
-        printf("%sファイルが開けません\n", fn_baHand); return;
+        printf("%sファイルが開けません\n", fn_baCard); return;
     }
     if (game_begin == 1 && initial_write != 1) {
         fprintf(fp, "\n");
     }
-
-    int ba_hand[51];
-    finfo2hands(ba_hand, finfo);
-    arrayWrite(fp, ba_hand, 51);
+    
+    int array[53];
+    finfo2array(array, finfo);
+    arrayWrite(fp, array, 53);
     fprintf(fp, "\n");
     fclose(fp);
 
-    // submitHand
-    fp = fopen(fn_submitHand, "a");
+
+    // submitCard
+    fp = fopen(fn_submitCard, "a");
     if (fp == NULL) {
-        printf("%sファイルが開けません\n", fn_submitHand); return;
+        printf("%sファイルが開けません\n", fn_submitCard); return;
     }
     if (game_begin == 1 && initial_write != 1) {
         fprintf(fp, "\n");
     }
-
-    int sub[5][14], submitHand[51];
-    bit2cards(sub, submitCards);
-    cards2hand1(submitHand, sub);
-    arrayWrite(fp, submitHand, 51);
+    
+    bit2array(array, submitCards);
+    arrayWrite(fp, array, 53);
     fprintf(fp, "\n");
     fclose(fp);
+
+
+    // oppCards
+    fp = fopen(fn_oppCards, "a");
+    if (fp == NULL) {
+        printf("%sファイルが開けません\n", fn_oppCards); return;
+    }
+    if (game_begin == 1 && initial_write != 1) {
+        fprintf(fp, "\n");
+    }
+    
+    bit2array(array, oppCards | myCards);
+    arrayWrite(fp, array, 53);
+    fprintf(fp, "\n");
+    fclose(fp);
+
 
     // states
     fp = fopen(fn_states, "a");
@@ -218,28 +236,9 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
         fprintf(fp, "\n");
     }
     
-    // 場の状態
-    finfoWrite(fp, finfo);
-    // 提出カードによって場の状態の変化
-    int ocinfo[4];
-    outCardsInfo(ocinfo, sub);
-    finfoChangedWrite(fp, finfo, ocinfo);
-    fprintf(fp, "\n");
-    fclose(fp);
-
-    // oppHands
-    fp = fopen(fn_oppHands, "a");
-    if (fp == NULL) {
-        printf("%sファイルが開けません\n", fn_oppHands); return;
-    }
-    if (game_begin == 1 && initial_write != 1) {
-        fprintf(fp, "\n");
-    }
-
-    int opp[5][14], oppHands[51];
-    bit2cards(opp, oppCards | myCards);
-    cards2hands(oppHands, opp);
-    arrayWrite(fp, oppHands, 51);
+    int fchange[5];
+    finfoChange(fp, finfo, submitCards, fchange);
+    arrayWrite(fp, fchange, 5);
     fprintf(fp, "\n");
     fclose(fp);
 }
@@ -248,31 +247,30 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
 /**
  * 推測モデルの学習の正解ラベルに用いる
  * 以下の１つのデータ GuessLabelData/ のファイルに書き込む
- * 1. 推測する対象の残りの手札 で作られる 手役構成
+ * 1. 推測する対象の残りの手札
 */
 void makeGuessLabelData(int64 myCards, int64 outCards)
 {
     FILE *fp;
-    char fn_restHands[40];
-    sprintf(fn_restHands,  "guessLabelData/P%d_restHands.txt",  player_num);
+    char fn_restCards[40];
+    sprintf(fn_restCards,  "guessLabelData/P%d_restCards.txt",  player_num);
 
     if (initial_write == 1) {
-        outputFileReset(fn_restHands);
+        outputFileReset(fn_restCards);
     }
 
-    // restHands
-    fp = fopen(fn_restHands, "a");
+    // restCards
+    fp = fopen(fn_restCards, "a");
     if (fp == NULL) {
-        printf("%sファイルが開けません\n", fn_restHands); return;
+        printf("%sファイルが開けません\n", fn_restCards); return;
     }
     if (game_begin == 1 && initial_write != 1) {
         fprintf(fp, "\n");
     }
-
-    int restCards[5][14], restHands[51];
-    bit2cards(restCards, myCards ^ outCards);
-    cards2hands(restHands, restCards);
-    arrayWrite(fp, restHands, 51);
+    
+    int array[53];
+    bit2array(array, myCards ^ outCards);
+    arrayWrite(fp, array, 53);
     fprintf(fp, "\n");
     fclose(fp);
 }
@@ -359,7 +357,6 @@ void outputFileReset(char *fname)
         printf("%sファイルが開けません\n", fname);
         return;
     }
-    fprintf(fp, "");
     fclose(fp);
 }
 
@@ -407,7 +404,7 @@ void simuVH(const bitValidHand *vh, fieldInfo *simField)
         // simField->onset = 1;
         simField->qty = vh->qty;
         simField->suit = 0;
-        simField->ord = 15;
+        simField->ord = 14;
         simField->seq = vh->seq;
 		simField->lock = 0;
 		if ((4 + vh->seq) <= vh->qty)
@@ -433,28 +430,38 @@ void simuVH(const bitValidHand *vh, fieldInfo *simField)
 }
 
 
-// 提出するカードの情報（枚数、階段か、スート、オーダー）を取得する
-void outCardsInfo(int info[4], int cards[5][14])
+// 革命のとき カード配列の強さを反転させる
+void reverseCards(int cards[5][14])
 {
-    int qty = 0, seq = 0, suit = 0, ord = 0;
-    for (int j = 0; j < 13; j++) {
-        for (int i = 0; i < 5; i++) {
-            if (cards[i][j] == 1) {
-                qty++;
-                suit += (1 << i);
-                ord = j + 1;
-                for (int k = j + 1; k < 14; k++) {
-                    if (cards[i][k] == 1) {
-                        seq = 1; qty++;
-                    }
-                }
+    int cp[5][14];
+    memcpy(cp, cards, sizeof(*cards));
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 13; j++) {
+            if (cp[i][j] == 1) {
+                cards[i][j] = 0;
+                cards[i][(12-j)%13] = 1;
             }
         }
-        if (qty != 0) break;
     }
-    info[0] = qty, info[1] = seq, info[2] = suit, info[3] = ord;
 }
 
+
+// 革命のとき 配列の強さを反転させる
+void reverseArray(int array[53])
+{
+    int cp[53];
+    memcpy(cp, array, sizeof(*array));
+    
+    int suit, ord;
+    for (int i = 0; i < 52; i++) {
+        if (cp[i] == 1) {
+            suit = i/13;
+            ord = i%13;
+            array[i] = 0;
+            array[suit*13 + (12-ord)%13] = 1;
+        }
+    }
+}
 
 
 
@@ -501,111 +508,121 @@ void bit2cards(int cards[5][14], int64 bitCards)
 }
 
 
-// カード配列 を 手役構成(重複あり) に変換する
-void cards2hands(int hands[51], int cards[5][14])
+// ビットカード を 配列 に変換する
+void bit2array(int array[53], int64 bitCards)
 {
-    int SOLO = 0, MUL2 = 14, MUL3 = 27, SEQ = 40;
-
-    for (int i = 0; i < 51; i++) {
-        hands[i] = 0;
+    for (int i = 0; i < 53; i++) {
+        array[i] = (bitCards >> i) & 1;
     }
+}
 
-    for (int j = 0; j < 13; j++) {
-        int num = 0;
+
+// finfo を 状態 に変換する
+void finfo2states(int state[24], const fieldInfo *finfo)
+{
+    state[0] = finfo->qty;
+    state[1] = finfo->ord;
+    state[2] = finfo->seq;
+    state[3] = finfo->lock;
+    state[4] = finfo->rev;
+    
+    for (int i = 0; i < 4; i++) {
+        state[5+i] = (finfo->suit >> i) & 1;
+    }
+    
+    int pass[5], rest[5], rank[5], mypos;
+    mypos = finfo->mypos;
+    for (int i = 0; i < 5; i++) {
+        int pos = (finfo->seat[i] - finfo->mypos + 5) % 5;
+        pass[pos] = (finfo->pass >> finfo->seat[i]) & 1;
+        rest[pos] = finfo->lest[finfo->seat[i]];
+        rank[pos] = 4 - finfo->rank[finfo->seat[i]];
+    }
+    for (int i = 0; i < 5; i++) {
+        state[9+i] = pass[i];
+        state[14+i] = rest[i];
+        state[19+i] = rank[i];
+    }
+}
+
+
+// finfo を 配列 に変換する
+void finfo2array(int array[53], const fieldInfo *finfo)
+{
+    for (int i = 0; i < 53; i++)
+        array[i] = 0;
+    
+    if (finfo->onset == 1)
+        return;
+    
+    int ord = finfo->ord;
+    if (finfo->seq == 0) {
         for (int i = 0; i < 4; i++) {
-            num += cards[i][j];
-            if (j < 11 && (cards[i][j] * cards[i][j+1] * cards[i][j+2] == 1))
-                hands[SEQ + j] = 1;
+            if (((finfo->suit >> i) & 1) == 1)
+                array[13*i + ord-1] = 1;
         }
-        if (num >= 1) hands[SOLO + j] = 1;
-        if (num >= 2) hands[MUL2 + j] = 1;
-        if (num >= 3) hands[MUL3 + j] = 1;
+        if (ord == 14 || ord == 0 || finfo->qty == 5)
+            array[52] = 1; // joker
     }
-    if (cards[4][13] == 1) hands[SOLO + 13] = 1; // joker
-}
-
-
-// カード配列 を 手役構成(1つ) に変換する
-void cards2hand1(int hands[51], int cards[5][14])
-{
-    int i, j;
-    int SOLO = 0, MUL2 = 14, MUL3 = 27, SEQ = 40;
-
-    for (i = 0; i < 51; i++) {
-        hands[i] = 0;
-    }
-
-    for (j = 0; j < 14; j++) {
-        int num = 0, seq = 0;
-        for (i = 0; i < 5; i++) {
-            num += cards[i][j];
-            if (j < 12 && cards[i][j] == 1) {
-                seq = cards[i][j] + cards[i][j+1] + cards[i][j+2];
-                if (seq >= 3) break;
-            }
+    else if (finfo->seq == 1) {
+        int suit = 0;
+        for (int i = 0; i < 4; i++) {
+            if (((finfo->suit >> i) & 1) == 1)
+                suit = i;
         }
-        if      (num == 0) continue;
-        if      (seq >= 3) hands[SEQ  + j] = 1;
-        else if (num == 1) hands[SOLO + j] = 1;
-        else if (num == 2) hands[MUL2 + j] = 1;
-        else if (num >= 3) hands[MUL3 + j] = 1;
-        break;
+        for (int j = ord; j < finfo->qty; j++) {
+            if (j == 14)
+                array[52] = 1; // joker
+            else
+                array[13*suit + j-1] = 1;
+        }
     }
 }
 
 
-// vha を 手役構成 に変換する
-void vha2hands(int hands[51], bitValidHand *vha)
+// カードを出したときの場の変化を調べる
+void finfoChange(FILE *fp, const fieldInfo *finfo, int64 submit, int fchange[5])
 {
-    int SOLO = 0, MUL2 = 14, MUL3 = 27, SEQ = 40;
-
-    for (int i = 0; i < 51; i++) {
-        hands[i] = 0;
+    for (int i = 0; i < 5; i++)
+        fchange[i] = 0;
+    
+    fchange[0] = finfo->lock;
+    fchange[1] = finfo->rev;
+    
+    int suit = 0, ord = 20, joker = 0, qty = 0, seq = 0;
+    for (int i = 0; i < 52; i++) {
+        if (((submit >> i) & 1) == 1) {
+            suit |= (1 << (int)i/13);
+            qty++;
+            if (i%13 + 1 > ord)
+                seq = 1;
+            if ((i%13) + 1 < ord)
+                ord = (i%13) + 1;
+        }
     }
-
-    if (vha->qty == 1) {
-        hands[SOLO + vha->ord - 1] = 1;
+    if (((submit >> 52) & 1) == 1) { // joker
+        joker = 1;
     }
-    else if (vha->qty == 2) {
-        hands[MUL2 + vha->ord - 1] = 1;
+    
+    if (ord == 20 && joker == 0) // pass
+        return;
+        
+    if (finfo->onset == 0 && finfo->lock == 0) {
+        int samesuit = 0;
+        for (int i = 0; i < 4; i++) {
+            if (((finfo->suit >> i) & 1) * ((suit >> i) & 1) == 1)
+                samesuit++;
+        }
+        if (finfo->qty == samesuit + joker || finfo->seq * samesuit == 1)
+            fchange[2] = 1; // しばりしたか
     }
-    else if (vha->qty >= 3) {
-        if (vha->seq == 1)
-            hands[SEQ + vha->ord - 1] = 1;
-        else
-            hands[MUL3 + vha->ord - 1] = 1;
+    if (finfo->rev == 0) {
+        if (qty >= 4 + seq)
+            fchange[3] = 1; // 革命したか
     }
-
-    if (((vha->hands >> 52) & 1) == 1) {
-        hands[SOLO + 13] = 1; // joker
-    }
+    if (ord == 6 || (seq == 1 && ord <= 6 && 6 <= ord + qty - 1))
+        fchange[4] = 1; // 8切りしたか
 }
-
-
-// finfo を 手役構成に変換する
-void finfo2hands(int hands[51], const fieldInfo *finfo)
-{
-    int SOLO = 0, MUL2 = 14, MUL3 = 27, SEQ = 40;
-
-    for (int i = 0; i < 51; i++) {
-        hands[i] = 0;
-    }
-
-    if (finfo->onset == 1) return;
-    if (finfo->qty == 1) {
-        hands[SOLO + finfo->ord - 1] = 1;
-    }
-    else if (finfo->qty == 2) {
-        hands[MUL2 + finfo->ord - 1] = 1;
-    }
-    else if (finfo->qty >= 3) {
-        if (finfo->seq == 1)
-            hands[SEQ + finfo->ord - 1] = 1;
-        else
-            hands[MUL3 + finfo->ord - 1] = 1;
-    }
-}
-
 
 
 
@@ -619,55 +636,6 @@ void cardsWrite(FILE *fp, int cards[5][14])
         }
     }
     fprintf(fp, "\n");
-}
-
-
-// finfo を書き込む
-void finfoWrite(FILE *fp, const fieldInfo *finfo)
-{
-    fprintf(fp, "%d,%d,", finfo->qty, finfo->ord);
-    fprintf(fp, "%d,%d,%d,", finfo->seq, finfo->lock, finfo->rev);
-    int suit[4];
-    for (int i = 0; i < 4; i++) {
-        suit[i] = (finfo->suit >> i) & 1;
-    }
-    arrayWrite(fp, suit, 4);
-    int pass[5], rest[5], rank[5], mypos;
-    mypos = finfo->mypos;
-    for (int i = 0; i < 5; i++) {
-        int pos = (finfo->seat[i] - finfo->mypos + 5) % 5;
-        pass[pos] = (finfo->pass >> finfo->seat[i]) & 1;
-        rest[pos] = finfo->lest[finfo->seat[i]];
-        rank[pos] = 4 - finfo->rank[finfo->seat[i]];
-    }
-    arrayWrite(fp, pass, 5);
-    arrayWrite(fp, rest, 5);
-    arrayWrite(fp, rank, 5);
-}
-
-
-// カードを出したときの場の変化 changedfinfo を書き込む
-void finfoChangedWrite(FILE *fp, const fieldInfo *finfo, int ocinfo[4])
-{
-    int changed[3] = {0, 0, 0};
-    int qty = ocinfo[0], seq = ocinfo[1], suit = ocinfo[2], ord = ocinfo[3];
-    if (finfo->onset == 0 && finfo->lock == 0) {
-        int samesuit = 0;
-        for (int i = 0; i < 4; i++) {
-            if (((finfo->suit >> i) & 1) * ((suit >> i) & 1) == 1)
-                samesuit++;
-        }
-        if (finfo->qty == samesuit || finfo->seq * samesuit == 1)
-            changed[0] = 1;
-    }
-    if (finfo->rev == 0) {
-        if (qty >= 4 + seq)
-            changed[1] = 1;
-    }
-    if (ord == 6 || (seq == 1 && ord <= 6 && 6 <= ord + qty - 1))
-        changed[2] = 1;
-
-    arrayWrite(fp, changed, 3);
 }
 
 

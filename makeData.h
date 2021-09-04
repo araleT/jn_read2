@@ -16,18 +16,17 @@ void gameBegin();
 void gameRunning();
 
 void simuVH(const bitValidHand *vh, fieldInfo *simField);
-void outCardsInfo(int info[4], int cards[5][14]);
+void reverseCards(int cards[5][14]);
+void reverseArray(int array[53]);
 
 void outCards2cards(int cards[5][14], int outCards[8][15]);
 void bit2cards(int cards[5][14], int64 bitCards);
-void cards2hands(int hands[51], int cards[5][14]);
-void cards2hand1(int hands[51], int cards[5][14]);
-void vha2hands(int hands[51], bitValidHand *vha);
-void finfo2hands(int hands[51], const fieldInfo *finfo);
+void bit2array(int array[53], int64 bitCards);
+void finfo2states(int state[24], const fieldInfo *finfo);
+void finfo2array(int array[53], const fieldInfo *finfo);
+void finfoChange(FILE *fp, const fieldInfo *finfo, int64 submit, int fchange[5]);
 
 void cardsWrite(FILE *fp, int array[5][14]);
-void finfoWrite(FILE *fp, const fieldInfo *finfo);
-void finfoChangedWrite(FILE *fp, const fieldInfo *finfo, int ocinfo[4]);
 void arrayWrite(FILE *fp, int array[], int size);
 void visualWrite(FILE *fp, int64 cards);
 void cardWrite(FILE *fp, int suit, int num);
