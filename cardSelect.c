@@ -1380,6 +1380,8 @@ void monteCarloSearch(int out_cards[8][15], int64 myCards, int64 oppCards, const
 	// 初手で取り得る行動をすべて列挙する -> vha
 	generateAllHands(&vhdG, &vhdS, myCards);
 	getAllValidHands(&vha, &vhdG, &vhdS, finfo, myCards);
+	
+	int useTraining = 0;
 
 	// 上がれる手が存在する場合はそれを採用する
 	int decFlag = -1;
@@ -1399,18 +1401,24 @@ void monteCarloSearch(int out_cards[8][15], int64 myCards, int64 oppCards, const
 	}
 
 	// 行動が1通りしかなければそれを選ぶ
-	if (vha.size == 1)
+	if (vha.size == 1) {
 		decFlag = 0;
+		useTraining = 3;
+	}
 
 	// 必勝手が存在すればそれを選ぶ
-	if (decFlag == -1)
+	if (decFlag == -1) {
 		decFlag = lastSearchTop(myCards, oppCards, finfo);
+		if (decFlag != -1)
+			useTraining = 2;
+	}
 
 	double score[MAX_ARRAY_SIZE];
 
 	// i==vha.size の場合はパスとして考える
 	if (decFlag == -1)
 	{
+		useTraining = 1;
 		for (i = 0; i < SIMULATION_COUNT; i++)
 		{
 
@@ -1539,61 +1547,60 @@ void monteCarloSearch(int out_cards[8][15], int64 myCards, int64 oppCards, const
 	double maxScore = 0.0;
 	double vha_scores[vha.size]; //  moveData用
 	// スコア最大の手を調べる
-	if (decFlag == -1)
-	{
-		for (i = 0; i < vha.size + 1; i++)
-		{
+	if (decFlag == -1) {
+		for (i = 0; i < vha.size; i++) {
 			double tmp = 0.0;
 			// シミュレーション回数0の手のスコアは0として考える
-			if (simulateCount[i] == 0)
-			{
-				comment_display("zero move", 0.0);
+			if (simulateCount[i] == 0) {
 				tmp = 0.0;
 			}
-			else
-			{
+			else {
 				tmp = (double)simulateScore[i] / (double)simulateCount[i];
 			}
 
-			if(i < vha.size) {
-				vha_scores[i] = tmp;
-			}
+			vha_scores[i] = tmp;
 
-			if (maxScore <= tmp)
-			{
+			if (maxScore <= tmp) {
 				maxScore = tmp;
 				idx = i;
-				comment_display("new max", maxScore);
 			}
 		}
 	}
-	else
-	{
+	else {
 		// シミュレーションによらず手が決まっていればそれを使う
 		idx = decFlag;
+		if (useTraining == 2) {
+			int rank = 0;
+			for (i = 0; i < 5; i++)
+				rank += ((finfo->goal >> i) & 1);
+			for (int i = 0; i < vha.size; i++) {
+				if (i == idx)
+					vha_scores[i] = (5-rank) * (5-rank);
+				else
+					vha_scores[i] = (4-rank) * (4-rank);;
+			}
+		}
 	}
 
-	if (vha.hands[idx].hands == 0LL)
-	{
+	if (vha.hands[idx].hands == 0LL) {
 		// パスするとき
-		for (i = 0; i < 8; i++)
-		{
+		for (i = 0; i < 8; i++) {
 			for (j = 0; j < 15; j++)
 				out_cards[i][j] = 0;
 		}
 	}
-	else
-	{
+	else {
 		// 提出するカードを配列に変換
 		setSubmitCard(out_cards, &vha.hands[idx]);
 	}
 
-	if (decFlag == -1 && finfo->rank[0] + finfo->rank[1] != 0) {
-		// make_csv(myCards, out_cards);
-		makeMoveData(myCards, vha, vha_scores, finfo, oppCards);
+	if (useTraining > 0) {
+		if (useTraining < 3) {
+			makeMoveData(myCards, vha, vha_scores, finfo, oppCards);
+			makeCheckData(myCards, finfo, vha);
+		}
 		makeGuessInputData(finfo, vha.hands[idx].hands, oppCards, myCards);
 		makeGuessLabelData(myCards, vha.hands[idx].hands);
-		// makeCheckData(myCards, finfo, vha);
 		initialDataEnd();
 		gameRunning();
 	}
