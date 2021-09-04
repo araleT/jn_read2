@@ -13,7 +13,7 @@
 #define PROTOCOL_VERSION	20070		//プロトコルヴァージョンを表す整数
 #define DEFAULT_SERVER		"127.0.0.1"	//デフォルトのサーバのアドレス 文字列で指定
 #define DEFAULT_PORT		42485		//デフォルトのポート番号 整数で指定
-#define DEFAULT_NAME		"jn20"	//デフォルトのクライアント名 文字列で指定
+#define DEFAULT_NAME		"jn_read2"	//デフォルトのクライアント名 文字列で指定
 
 extern const int g_logging;
 
