@@ -6,7 +6,7 @@
 void make_csv(int64 my_cards, int out_cards[8][15]);
 void makeMoveData(int64 myCards, bitValidHandsArray vha, double vha_scores[], const fieldInfo *finfo, int64 OppCards);
 void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCards, int64 myCards);
-void makeGuessLabelData(int64 myCards, int64 outCards);
+void makeGuessLabelData(int64 myCards, int64 submitCards);
 void makeCheckData(int64 myCards, const fieldInfo *finfo, bitValidHandsArray vha);
 
 void setPlayerNum(int pnum);

@@ -221,7 +221,7 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
         fprintf(fp, "\n");
     }
     
-    bit2array(array, oppCards | myCards);
+    bit2array(array, oppCards | myCards ^ submitCards);
     arrayWrite(fp, array, 53);
     fprintf(fp, "\n");
     fclose(fp);
@@ -249,7 +249,7 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
  * 以下の１つのデータ GuessLabelData/ のファイルに書き込む
  * 1. 推測する対象の残りの手札
 */
-void makeGuessLabelData(int64 myCards, int64 outCards)
+void makeGuessLabelData(int64 myCards, int64 submitCards)
 {
     FILE *fp;
     char fn_restCards[40];
@@ -269,7 +269,7 @@ void makeGuessLabelData(int64 myCards, int64 outCards)
     }
     
     int array[53];
-    bit2array(array, myCards ^ outCards);
+    bit2array(array, myCards ^ submitCards);
     arrayWrite(fp, array, 53);
     fprintf(fp, "\n");
     fclose(fp);
