@@ -171,7 +171,7 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
     char fn_baCard[40], fn_submitCard[40], fn_states[40], fn_oppCards[40];
     sprintf(fn_baCard,     "guessInputData/P%d_baCard.txt",     player_num);
     sprintf(fn_submitCard, "guessInputData/P%d_submitCard.txt", player_num);
-    sprintf(fn_oppCards,   "guessInputData/P%d_oppCard.txt",   player_num);
+    sprintf(fn_oppCards,   "guessInputData/P%d_oppCards.txt",   player_num);
     sprintf(fn_states,     "guessInputData/P%d_states.txt",     player_num);
 
     if (initial_write == 1) {
