@@ -1,8 +1,7 @@
 /.vscode
 
 /checkData/*.txt
-/guessInputData/*.txt
-/guessLabelData/*.txt
+/guessData/*.txt
 /moveData/*.txt
 *.o
 client

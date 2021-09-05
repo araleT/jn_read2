@@ -169,10 +169,10 @@ void makeGuessInputData(const fieldInfo *finfo, int64 submitCards, int64 oppCard
 {
     FILE *fp;
     char fn_baCard[40], fn_submitCard[40], fn_states[40], fn_oppCards[40];
-    sprintf(fn_baCard,     "guessInputData/P%d_baCard.txt",     player_num);
-    sprintf(fn_submitCard, "guessInputData/P%d_submitCard.txt", player_num);
-    sprintf(fn_oppCards,   "guessInputData/P%d_oppCards.txt",   player_num);
-    sprintf(fn_states,     "guessInputData/P%d_states.txt",     player_num);
+    sprintf(fn_baCard,     "guessData/P%d_baCard.txt",     player_num);
+    sprintf(fn_submitCard, "guessData/P%d_submitCard.txt", player_num);
+    sprintf(fn_oppCards,   "guessData/P%d_oppCards.txt",   player_num);
+    sprintf(fn_states,     "guessData/P%d_states.txt",     player_num);
 
     if (initial_write == 1) {
         outputFileReset(fn_baCard);
@@ -253,7 +253,7 @@ void makeGuessLabelData(int64 myCards, int64 outCards)
 {
     FILE *fp;
     char fn_restCards[40];
-    sprintf(fn_restCards,  "guessLabelData/P%d_restCards.txt",  player_num);
+    sprintf(fn_restCards,  "guessData/P%d_restCards.txt",  player_num);
 
     if (initial_write == 1) {
         outputFileReset(fn_restCards);
