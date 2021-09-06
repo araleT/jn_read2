@@ -1401,7 +1401,7 @@ void monteCarloSearch(int out_cards[8][15], int64 myCards, int64 oppCards, const
 	}
 
 	// 行動が1通りしかなければそれを選ぶ
-	if (vha.size == 1) {
+	if (decFlag == -1 && vha.size == 1) {
 		decFlag = 0;
 		useTraining = 3;
 	}
